@@ -10,6 +10,7 @@ import org.eclipse.mylyn.docs.epub.core.EPUB;
 import org.eclipse.mylyn.docs.epub.internal.EPUBFileUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.util.CollectionUtils;
 
 import java.io.File;
@@ -18,10 +19,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author kit
@@ -39,27 +37,29 @@ public class EPUBUtil {
         MyEpubWriter epubWriter =new MyEpubWriter();
         InputStream inputStream = Files.newInputStream(Paths.get(filePath));
         Book book = epubReader.readEpub(inputStream);
-        List<Resource> resourceList = book.getContents();
+//        List<Resource> resourceList = book.getContents();
         Resources resources = book.getResources();
-//        Collection<Resource> resourceList = resources.getAll();
+        Collection<Resource> resourceList = resources.getAll();
         Iterator<Resource> iterator = resourceList.iterator();
-        List<String> removeList=new ArrayList<>();
+        Set<String> removeList=new HashSet<>();
         while (iterator.hasNext()) {
             Resource resource=iterator.next();
             Document document = Jsoup.parse(resource.getInputStream(), resource.getInputEncoding(), "");
-            String text = document.text();
-            if(text.contains("Z-Library")||text.contains("电子书")){
-                System.out.println(document);
-                removeList.add(resource.getHref());
+            for (Element element : document.getAllElements()) {
+                String text = element.text();
+                if(text.contains("Z-Library")||text.contains("电子书")){
+//                    System.out.println(document);
+                    removeList.add(resource.getHref());
+                }
             }
         }
         String[] split = filePath.split("\\\\");
         if(!CollectionUtils.isEmpty(removeList)){
             log.warn("文件：{} 推广信息:{}",split[split.length-1],removeList);
-//            removeList.forEach(resources::remove);
+            removeList.forEach(resources::remove);
         }
 
-        epubWriter.write(book, Files.newOutputStream(Paths.get("D:\\电子书\\40-小巷人家\\123.epub")));
+//        epubWriter.write(book, Files.newOutputStream(Paths.get("D:\\电子书\\40-小巷人家\\123.epub")));
     }
 
 

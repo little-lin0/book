@@ -23,7 +23,7 @@ public class PDFUtil {
 //                }
 //            }
 //        }
-//        handlePDF("D:\\浏览器下载\\陷入我们的热恋.pdf");
+        handlePDF("D:\\浏览器下载\\萤火虫小巷.pdf");
 
     }
     public static void handlePDF (String filePath) {
@@ -53,7 +53,7 @@ public class PDFUtil {
 //            fileDir.mkdirs();
 //            File file=new File(fileDir,"123.pdf");
 //            file.createNewFile();
-            doc.save(filePath);
+            doc.save(filePath.replace(".pdf","(已修改).pdf"));
             doc.close();
         } catch (Exception e) {
             e.printStackTrace();

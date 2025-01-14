@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
  * @description: TODO
  * @date 2024/12/18 10:35
  */
-public class MyEpubWriter extends EpubWriter{
+public class MyEpubWriter{
     private static final Logger log = LoggerFactory.getLogger(MyEpubWriter.class);
     static final String EMPTY_NAMESPACE_PREFIX = "";
     private BookProcessor bookProcessor;

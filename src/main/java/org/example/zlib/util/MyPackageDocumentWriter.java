@@ -34,12 +34,12 @@ public class MyPackageDocumentWriter extends PackageDocumentBase {
     public static void write(MyEpubWriter epubWriter, XmlSerializer serializer, Book book) throws IOException {
         try {
             serializer.startDocument("UTF-8", false);
-            serializer.setPrefix("opf", "http://www.idpf.org/2007/opf");
-            serializer.setPrefix("dc", "http://purl.org/dc/elements/1.1/");
+            serializer.setPrefix(null, "http://www.idpf.org/2007/opf");
+//            serializer.setPrefix("dc", "http://purl.org/dc/elements/1.1/");
             serializer.startTag("http://www.idpf.org/2007/opf", "package");
             serializer.attribute("", "version", "2.0");
-            serializer.attribute("", "unique-identifier", "BookId");
-            PackageDocumentMetadataWriter.writeMetaData(book, serializer);
+            serializer.attribute("", "unique-identifier", "id");
+            MyPackageDocumentMetadataWriter.writeMetaData(book, serializer);
             writeManifest(book, epubWriter, serializer);
             writeSpine(book, epubWriter, serializer);
             writeGuide(book, epubWriter, serializer);
