@@ -8,22 +8,37 @@ import org.apache.pdfbox.text.PDFTextStripper;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 @Slf4j
 public class PDFUtil {
     public static void main(String[] args) {
-//        File baseDir=new File(DownloadUtil.BASE_FILE_PATH);
-//        File[] fileDirList = baseDir.listFiles();
-//        for (File fileDir : fileDirList) {
-//            File[] files = fileDir.listFiles();
-//            for (File file : files) {
-//                if(file.getName().contains("pdf")){
+        File baseDir=new File(DownloadUtil.BASE_FILE_PATH);
+        List<File> fileDirList = Arrays.stream(baseDir.listFiles()).filter(file->Integer.valueOf(file.getName().split("-")[0])>0).sorted(Comparator.comparing(file->Integer.valueOf(file.getName().split("-")[0]))).collect(Collectors.toList());
+        for (File fileDir : fileDirList) {
+            File[] files = fileDir.listFiles();
+//            Optional<File> edit = Arrays.stream(files).filter(file -> file.getName().contains("已修改")).findFirst();
+//            if(edit.isPresent()){
+//                continue;
+//            }
+            for (File file : files) {
+                if(file.getName().contains("pdf")){
+                    if(file.getName().contains("已修改")){
+                        file.renameTo(new File(file.getAbsolutePath().replace("(已修改)","")));
+                    }else {
+                        file.delete();
+                    }
 //                    log.error("开始修改："+file.getName());
 //                    file.setWritable(true);
 //                    handlePDF(file.getAbsolutePath());
-//                }
-//            }
-//        }
-        handlePDF("D:\\浏览器下载\\萤火虫小巷.pdf");
+                }
+            }
+        }
+//        handlePDF("D:\\浏览器下载\\萤火虫小巷.pdf");
 
     }
     public static void handlePDF (String filePath) {

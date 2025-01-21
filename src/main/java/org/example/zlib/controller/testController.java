@@ -61,7 +61,7 @@ public class testController {
     public static void getBookFileByName(@RequestParam String name, @RequestParam String authorName, HttpServletResponse response, List<String> bookList, List<String> noGetBookList) throws IOException {
         String realName = name.split("-")[1];
         log.warn("开始获取书籍：{}",realName);
-        Document root = getSearchHtmlRoot(BASE_URL+"/s/"+name.split("-")[1]+"-"+name.split("-")[2]+"?order=bestmatch");
+        Document root = getSearchHtmlRoot(BASE_URL+"/s/"+name.split("-")[1]+"-"+authorName);
         Element body = root.getElementsByTag("body").get(0);
         Element searchResultBox = body.getElementById("searchResultBox");
         String limitNum = body.getElementsByClass("caret-scroll__tile").get(0)

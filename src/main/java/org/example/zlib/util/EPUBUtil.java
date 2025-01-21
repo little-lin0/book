@@ -2,24 +2,17 @@ package org.example.zlib.util;
 
 import lombok.extern.slf4j.Slf4j;
 import nl.siegmann.epublib.domain.*;
-import nl.siegmann.epublib.epub.EpubProcessorSupport;
 import nl.siegmann.epublib.epub.EpubReader;
-import nl.siegmann.epublib.epub.EpubWriter;
-import org.apache.tika.parser.epub.EpubParser;
-import org.eclipse.mylyn.docs.epub.core.EPUB;
-import org.eclipse.mylyn.docs.epub.internal.EPUBFileUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.util.CollectionUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author kit
@@ -30,9 +23,28 @@ import java.util.*;
 @Slf4j
 public class EPUBUtil {
     public static void main(String[] args) throws Exception {
-        handleEPUB("D:\\电子书\\40-小巷人家\\小巷人家.epub");
+        File baseDir=new File(DownloadUtil.BASE_FILE_PATH);
+        List<File> fileDirList = Arrays.stream(baseDir.listFiles()).filter(file->Integer.valueOf(file.getName().split("-")[0])>0).sorted(Comparator.comparing(file->Integer.valueOf(file.getName().split("-")[0]))).collect(Collectors.toList());
+        PrintWriter writer=new PrintWriter(new File("C:\\Users\\69507\\Desktop\\电子书_检测.txt"));
+        for (File fileDir : fileDirList) {
+            File[] files = fileDir.listFiles();
+            for (File file : files) {
+                if(file.getName().contains("epub")){
+                    log.error("开始检测："+fileDir.getName());
+                    try {
+                        writer.println(fileDir.getName());
+                        writer.flush();
+                        handleEPUB(file.getAbsolutePath(),writer);
+                    } catch (Exception e) {
+                        log.error("检测："+fileDir.getName()+" 异常");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        handleEPUB("D:\\电子书\\151-女性的觉醒-沙法丽\\女性的觉醒-沙法丽.epub", writer);
     }
-    public static void handleEPUB(String filePath) throws Exception {
+    public static void handleEPUB(String filePath, PrintWriter writer) throws Exception {
         EpubReader epubReader = new EpubReader();
         MyEpubWriter epubWriter =new MyEpubWriter();
         InputStream inputStream = Files.newInputStream(Paths.get(filePath));
@@ -56,7 +68,8 @@ public class EPUBUtil {
         String[] split = filePath.split("\\\\");
         if(!CollectionUtils.isEmpty(removeList)){
             log.warn("文件：{} 推广信息:{}",split[split.length-1],removeList);
-            removeList.forEach(resources::remove);
+            writer.println(removeList);
+//            removeList.forEach(resources::remove);
         }
 
 //        epubWriter.write(book, Files.newOutputStream(Paths.get("D:\\电子书\\40-小巷人家\\123.epub")));
