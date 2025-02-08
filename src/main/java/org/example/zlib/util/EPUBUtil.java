@@ -14,6 +14,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.example.zlib.controller.testController.USER_HOME;
+
 /**
  * @author kit
  * @version 1.0
@@ -22,27 +24,31 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class EPUBUtil {
+    public static final String BASE_FILE_PATH=USER_HOME+"\\Desktop\\电子书";
     public static void main(String[] args) throws Exception {
-        File baseDir=new File(DownloadUtil.BASE_FILE_PATH);
-        List<File> fileDirList = Arrays.stream(baseDir.listFiles()).filter(file->Integer.valueOf(file.getName().split("-")[0])>0).sorted(Comparator.comparing(file->Integer.valueOf(file.getName().split("-")[0]))).collect(Collectors.toList());
-        PrintWriter writer=new PrintWriter(new File("C:\\Users\\69507\\Desktop\\电子书_检测.txt"));
-        for (File fileDir : fileDirList) {
-            File[] files = fileDir.listFiles();
-            for (File file : files) {
-                if(file.getName().contains("epub")){
-                    log.error("开始检测："+fileDir.getName());
-                    try {
-                        writer.println(fileDir.getName());
-                        writer.flush();
-                        handleEPUB(file.getAbsolutePath(),writer);
-                    } catch (Exception e) {
-                        log.error("检测："+fileDir.getName()+" 异常");
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-        handleEPUB("D:\\电子书\\151-女性的觉醒-沙法丽\\女性的觉醒-沙法丽.epub", writer);
+        FileWriter fw = new FileWriter(USER_HOME + "\\Desktop\\电子书_检测.txt", true);
+        PrintWriter writer = new PrintWriter(fw);
+        //        File baseDir=new File(BASE_FILE_PATH);
+//        List<File> fileDirList = Arrays.stream(baseDir.listFiles()).filter(file->Integer.valueOf(file.getName().split("-")[0])>0).sorted(Comparator.comparing(file->Integer.valueOf(file.getName().split("-")[0]))).collect(Collectors.toList());
+//        PrintWriter writer=new PrintWriter(new File("C:\\Users\\69507\\Desktop\\电子书_检测.txt"));
+//        for (File fileDir : fileDirList) {
+//            File[] files = fileDir.listFiles();
+//            for (File file : files) {
+//                if(file.getName().contains(".epub")){
+//                    log.error("开始检测："+fileDir.getName());
+//                    try {
+//                        writer.println(fileDir.getName());
+//                        writer.flush();
+//                        handleEPUB(file.getAbsolutePath(),writer);
+//                    } catch (Exception e) {
+//                        log.error("检测："+fileDir.getName()+" 异常");
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
+        handleEPUB("D:\\电子书\\132-拖延心理学\\拖延心理学.epub", writer);
+        writer.close();
     }
     public static void handleEPUB(String filePath, PrintWriter writer) throws Exception {
         EpubReader epubReader = new EpubReader();

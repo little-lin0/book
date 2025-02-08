@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import okhttp3.RequestBody;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.example.zlib.util.EPUBUtil;
+import org.example.zlib.util.PDFUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
@@ -21,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.nio.file.Files;
@@ -28,6 +31,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.pdfbox.cos.COSInteger.get;
+import static org.example.zlib.util.DownloadUtil.*;
 import static org.springframework.util.ResourceUtils.getFile;
 
 /**
@@ -57,11 +61,14 @@ public class testController {
     public static final String BASE_FILE_PATH="D:\\电子书";
     public static  JSONObject token=new JSONObject();
 
+    public static String USER_HOME=System.getProperty("user.home");
+
+
     @PostMapping("")
-    public static void getBookFileByName(@RequestParam String name, @RequestParam String authorName, HttpServletResponse response, List<String> bookList, List<String> noGetBookList) throws IOException {
+    public static void getBookFileByName(@RequestParam String name, @RequestParam String authorName, HttpServletResponse response, PrintWriter writer) throws IOException {
         String realName = name.split("-")[1];
         log.warn("开始获取书籍：{}",realName);
-        Document root = getSearchHtmlRoot(BASE_URL+"/s/"+name.split("-")[1]+"-"+authorName);
+        Document root = getSearchHtmlRoot(BASE_URL+"/s/"+name.split("-")[1]+"?order=bestmatch");
         Element body = root.getElementsByTag("body").get(0);
         Element searchResultBox = body.getElementById("searchResultBox");
         String limitNum = body.getElementsByClass("caret-scroll__tile").get(0)
@@ -71,7 +78,7 @@ public class testController {
             if(emailIterator.hasNext()){
                 login_email=emailIterator.next();
                 token=new JSONObject();
-                getBookFileByName(name,authorName,null, bookList, noGetBookList);
+                getBookFileByName(name,authorName,null, writer);
                 return;
             }else {
                 throw  new RuntimeException("no account");
@@ -88,7 +95,7 @@ public class testController {
             Elements author = bookCard.getElementsByAttributeValue("slot", "author");
             if(title.text().contains(realName)&&author.text().contains(authorName)){
                log.warn("找到 书名：{} 作者：{} 大小：{}",title.text(),author.text(),filesize);
-                getFile(response,url,name,bookId);
+                getFile(response,url,name,bookId,writer);
                 bookList.add(name);
                 return;
             }
@@ -97,7 +104,7 @@ public class testController {
         noGetBookList.add(name);
     }
     @GetMapping("downLoad")
-    public static void getFile(HttpServletResponse response, @RequestParam String url, @RequestParam String name, @RequestParam String bookId) throws IOException {
+    public static void getFile(HttpServletResponse response, @RequestParam String url, @RequestParam String name, @RequestParam String bookId, PrintWriter writer) throws IOException {
         Document root = getDetailHtmlRoot(url);
         Element body = root.getElementsByTag("body").get(0);
 //        Element button = body.get(0).getElementsByClass("book-actions-buttons").get(0);
@@ -117,12 +124,12 @@ public class testController {
         String realName = name.substring(name.indexOf("-") + 1);
         if(fileTypeSet.contains(fileType)){
             downLoadFileTypeList.remove(fileType);
-            downLoadFile(response,fileUrl,fileType,realName,filePath);
+            downLoadFile(response,fileUrl,fileType,realName,filePath,writer);
         }
-        downLoadExtraTypeFile(response,bookId,realName,downLoadFileTypeList,filePath,convertUrlMap);
+        downLoadExtraTypeFile(response,bookId,realName,downLoadFileTypeList,filePath,convertUrlMap,writer);
     }
 
-    public static void downLoadExtraTypeFile(HttpServletResponse response, String bookId, String name, List<String> fileTypeList, String filePath, Map<String, String> convertUrlMap) throws IOException {
+    public static void downLoadExtraTypeFile(HttpServletResponse response, String bookId, String name, List<String> fileTypeList, String filePath, Map<String, String> convertUrlMap, PrintWriter writer) throws IOException {
         String extraFileUrl=BASE_URL+"/papi/book/"+bookId+"/formats";
         Map<String,String> fileTypeUrlMap=getExtraFileUrlList(extraFileUrl);
         if(MapUtil.isEmpty(fileTypeUrlMap)){
@@ -135,13 +142,13 @@ public class testController {
             String fileurl = convertUrlMap.get(fileType);
             if (Objects.nonNull(fileurl)) {
                 log.warn("书名：{} 下载其他其他格式：{}",name,fileType);
-                downLoadFile(response, fileurl, fileType, name, filePath);
+                downLoadFile(response, fileurl, fileType, name, filePath, writer);
             } else {
                 fileurl = fileTypeUrlMap.get(fileType);
                 if (Objects.nonNull(fileurl)) {
                     fileurl = BASE_URL + fileurl;
                     log.warn("书名：{} 下载其他其他格式：{}",name,fileType);
-                    downLoadFile(response, fileurl, fileType, name, filePath);
+                    downLoadFile(response, fileurl, fileType, name, filePath, writer);
                 }
             }
         }
@@ -208,7 +215,7 @@ public class testController {
         Response response = client.newCall(request).execute();
         return Jsoup.parse(response.body().string());
     }
-    public static  void downLoadFile(HttpServletResponse httpServletResponse, String url, String fileType, String name,String filePath) throws IOException {
+    public static  void downLoadFile(HttpServletResponse httpServletResponse, String url, String fileType, String name, String filePath, PrintWriter writer) throws IOException {
         log.warn("开始下载：{} 格式：{} url：{}",name,fileType,url);
         Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 7890));
         OkHttpClient client =  new OkHttpClient.Builder()
@@ -222,13 +229,33 @@ public class testController {
                 .addHeader("Cookie", cookie)
                 .build();
         Response response = client.newCall(request).execute();
-        OutputStream outputStream = Files.newOutputStream(new File(filePath, name + fileType).toPath());
+        File file = new File(filePath, name + fileType);
+        OutputStream outputStream = Files.newOutputStream(file.toPath());
         IOUtils.copy(response.body().byteStream(), outputStream);
         outputStream.flush();
         outputStream.close();
-        log.warn("下载{} 格式：{} 成功",name,fileType);
-        //todo 处理文件
+        log.warn("下载{} 格式：{} 结束 ",name,fileType);
+        // 处理文件
+        handleFile(file,fileType,writer);
     }
+
+    private static void handleFile(File file, String fileType, PrintWriter writer) {
+        log.error("开始修改：" + file.getName());
+        try {
+            if (".pdf".equals(fileType)) {
+                PDFUtil.handlePDF(file.getAbsolutePath());
+            } else if (".epub".equals(fileType)) {
+                writer.println(file.getName());
+                writer.flush();
+                EPUBUtil.handleEPUB(file.getAbsolutePath(), writer);
+                log.error("修改结束：" + file.getName());
+            }
+        } catch (Exception e) {
+            log.error("修改异常：" + file.getName());
+            exceptionBookList.add(file.getName());
+        }
+    }
+
     public static JSONObject getToken(String email) throws IOException {
         if(MapUtil.isNotEmpty(token))
             return token;
