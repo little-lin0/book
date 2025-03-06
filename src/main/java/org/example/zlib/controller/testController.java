@@ -68,7 +68,7 @@ public class testController {
     public static void getBookFileByName(@RequestParam String name, @RequestParam String authorName, HttpServletResponse response, PrintWriter writer) throws IOException {
         String realName = name.split("-")[1];
         log.warn("开始获取书籍：{}",realName);
-        Document root = getSearchHtmlRoot(BASE_URL+"/s/"+name.split("-")[1]+"?order=bestmatch");
+        Document root = getSearchHtmlRoot(BASE_URL+"/s/"+realName+authorName);
         Element body = root.getElementsByTag("body").get(0);
         Element searchResultBox = body.getElementById("searchResultBox");
         String limitNum = body.getElementsByClass("caret-scroll__tile").get(0)
@@ -288,6 +288,97 @@ public class testController {
                 .build();
         Response response = client.newCall(request).execute();
         return JSONObject.parseObject(response.body().string());
+    }
+
+    public static JSONArray getDownLoadBookInfo() throws IOException {
+        JSONArray bookInfo = new JSONArray();
+        for (String email : emailSet) {
+            JSONObject responseObject=login(email);
+            JSONArray errors = responseObject.getJSONArray("errors");
+            if(!CollectionUtils.isEmpty(errors)){
+                continue;
+            }
+            JSONArray downLoadBookInfo=getDownLoadBook(responseObject.getJSONObject("response"));
+            bookInfo.addAll(downLoadBookInfo);
+        }
+        return bookInfo;
+    }
+
+    private static JSONArray getDownLoadBook(JSONObject token) throws IOException {
+        Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 7890));
+        OkHttpClient client =  new OkHttpClient.Builder()
+                .proxy(proxy)
+                .build();
+        String cookie="remix_userkey="+token.getString("user_key")+";remix_userid="+token.getString("user_id");
+        Request request = new Request.Builder()
+                .url("https://zh.z-lib.gs/papi/user/related_books/download_history/200")
+                .method("GET", null)
+                .addHeader("Cookie", cookie)
+                .build();
+        Response response = client.newCall(request).execute();
+        String resultString = response.body().string();
+        return JSONObject.parseObject(resultString).getJSONArray("books");
+    }
+
+    private static JSONArray getRecommendBook(List<Long> bookIds) throws IOException {
+        Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 7890));
+        OkHttpClient client =  new OkHttpClient.Builder()
+                .proxy(proxy)
+                .build();
+        JSONObject token=getToken(login_email);
+        String cookie="remix_userkey="+token.getString("user_key")+";remix_userid="+token.getString("user_id");
+        MediaType mediaType = MediaType.parse("application/json");
+        Map<String,List<Long>> bodyParam=new HashMap<>();
+        bodyParam.put("bookIds",bookIds);
+        RequestBody body = RequestBody.create(JSONObject.toJSONString(bodyParam),mediaType);
+        Request request = new Request.Builder()
+                .url("https://zh.z-lib.gs/papi/book/recommended/mosaic/50")
+                .method("POST", body)
+                .addHeader("Cookie", cookie)
+                .addHeader("Content-Type", "application/json")
+                .build();
+        Response response = client.newCall(request).execute();
+        String resultString = response.body().string();
+        return JSONObject.parseObject(resultString).getJSONArray("books");
+    }
+
+    public static void main(String[] args) throws IOException {
+        JSONArray downLoadBookInfo = getDownLoadBookInfo();
+        List<Long> bookIds=new ArrayList<>();
+        bookIds.add(23226896L);
+        bookIds.add(17504981L);
+        bookIds.add(5722826L);
+        bookIds.add(44476075L);
+        bookIds.add(115607430L);
+        bookIds.add(15819626L);
+        JSONArray recommendBook = getRecommendBook(bookIds);
+        PrintWriter printWriter=new PrintWriter(USER_HOME+"\\DeskTop\\推荐电子书.txt");
+        for (Object o : recommendBook) {
+            JSONObject book = (JSONObject) o;
+            if(Objects.isNull(book.get("cover"))){
+                continue;
+            }
+            if(isDownLoad(downLoadBookInfo,book)){
+                continue;
+            }
+            printWriter.println(book.getString("title")+"-"+book.getString("author"));
+            printWriter.flush();
+        }
+        printWriter.close();
+    }
+
+    private static boolean isDownLoad(JSONArray downLoadBookInfo, JSONObject book) {
+        for (Object o : downLoadBookInfo) {
+            JSONObject downLoadBook = (JSONObject) o;
+            if(downLoadBook.getLong("id").equals(book.getLong("id"))){
+                return true;
+            }
+            if(book.getString("title").contains(downLoadBook.getString("title"))
+                    &&book.getString("author").contains(downLoadBook.getString("author"))){
+                return true;
+            }
+        }
+        return false;
     }
 
 

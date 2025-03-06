@@ -29,24 +29,27 @@ public class DownloadUtil {
             Scanner scanner=new Scanner(new File(USER_HOME+"\\Desktop\\电子书.txt"));
             FileWriter fw = new FileWriter(USER_HOME + "\\Desktop\\电子书_检测.txt", true);
             PrintWriter writer = new PrintWriter(fw);
-            boolean isChangeDir=true;
+            boolean isChangeDir=false;
+            int xh=238;
             while (scanner.hasNext()){
                 String nextLine = scanner.nextLine();
-                if(nextLine.equals("----无")){
-                    continue;
-                }
-                if(nextLine.equals("---------新建")){
-                    isChangeDir=false;
-                    continue;
-                }
+//                if(nextLine.equals("----无")){
+//                    continue;
+//                }
+//                if(nextLine.equals("---------新建")){
+//                    isChangeDir=false;
+//                    continue;
+//                }
                 String[] split = nextLine.split("-");
-                String fileDir = isChangeDir?nextLine.replace("-" + split[2], ""):nextLine;
+//                String fileDir = isChangeDir?nextLine.replace("-" + split[2], ""):nextLine;
+                String fileDir=xh+"-"+nextLine;
+                xh++;
                 File file=new File(BASE_FILE_PATH,fileDir);
                 if(file.exists()){
                     continue;
                 }
                 try {
-                    testController.getBookFileByName(fileDir,split[2],null,writer);
+                    testController.getBookFileByName(fileDir,split[1],null,writer);
                 } catch (Exception e) {
                     e.printStackTrace();
                     if(e.getMessage().equals("no account")){
